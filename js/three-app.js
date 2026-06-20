@@ -1,4 +1,4 @@
-// Upgraded 3D Visualizations using Three.js with mode switching - Twisting Tower Edition
+// Upgraded 3D Visualizations using Three.js with mode switching - Coohom BIM Edition
 
 document.addEventListener('DOMContentLoaded', () => {
     initHero3D();
@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
 let activeModalRenderers = {};
 
 /**
- * Initializes the premium 3D twisting skyscraper, Exoskeleton, and Scanner Ring in the Hero Section
+ * Initializes the premium 3D Coohom-style BIM Extruder & Laser Render Sweep in the Hero Section
  */
 function initHero3D() {
     const container = document.getElementById('hero-canvas-container');
@@ -21,14 +21,15 @@ function initHero3D() {
 
     // Camera setup
     const camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
-    camera.position.set(0, 10, 26);
-    camera.lookAt(0, 8, 0);
+    camera.position.set(0, 9, 25);
+    camera.lookAt(0, 2.5, 0);
 
     // Renderer setup
     const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
+    renderer.localClippingEnabled = true; // CRITICAL: Enables clipping planes locally for our render sweep!
 
     // Lights
     const ambientLight = new THREE.AmbientLight(0x0f1c34, 1.8);
@@ -42,7 +43,7 @@ function initHero3D() {
     dirLight2.position.set(-15, 10, -15);
     scene.add(dirLight2);
 
-    // Main Group to hold the skyscraper and its components (will tilt and rotate)
+    // Main Group to hold the villa and its components (will tilt and rotate)
     const mainGroup = new THREE.Group();
     scene.add(mainGroup);
 
@@ -52,153 +53,242 @@ function initHero3D() {
     mainGroup.add(solidGlassGroup);
     mainGroup.add(wireframeGroup);
 
+    // 1. Defining clipping planes for the render sweep
+    // solidClipPlane will render meshes only when x <= constant (on the left of the scanner)
+    const solidClipPlane = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 0);
+    // wireframeClipPlane will render wireframe lines only when x >= constant (on the right of the scanner)
+    const wireframeClipPlane = new THREE.Plane(new THREE.Vector3(1, 0, 0), 0);
+
     // Materials
-    const goldWireMaterial = new THREE.LineBasicMaterial({ color: 0xd4af37, transparent: true, opacity: 0.9, linewidth: 2.0 });
-    const blueWireMaterial = new THREE.LineBasicMaterial({ color: 0x0077ff, transparent: true, opacity: 0.5 });
-    const glassMaterial = new THREE.MeshStandardMaterial({
-        color: 0x070e1c,
-        roughness: 0.1,
-        metalness: 0.9,
-        transparent: true,
-        opacity: 0.4,
-        flatShading: true,
-        side: THREE.DoubleSide
-    });
-    const coreMaterial = new THREE.MeshStandardMaterial({
+    const goldMetalMaterial = new THREE.MeshStandardMaterial({
         color: 0xd4af37,
-        emissive: 0xd4af37,
-        emissiveIntensity: 0.8,
+        roughness: 0.15,
+        metalness: 0.9,
+        clippingPlanes: [solidClipPlane]
+    });
+    const blueGlassMaterial = new THREE.MeshStandardMaterial({
+        color: 0x0077ff,
+        roughness: 0.05,
+        metalness: 0.95,
         transparent: true,
-        opacity: 0.75
+        opacity: 0.45,
+        clippingPlanes: [solidClipPlane]
+    });
+    const wallSolidMaterial = new THREE.MeshStandardMaterial({
+        color: 0x111e38,
+        roughness: 0.5,
+        metalness: 0.2,
+        transparent: true,
+        opacity: 0.9,
+        clippingPlanes: [solidClipPlane]
+    });
+    const baseSolidMaterial = new THREE.MeshStandardMaterial({
+        color: 0x0a1424,
+        roughness: 0.7,
+        metalness: 0.3,
+        clippingPlanes: [solidClipPlane]
     });
 
-    // 1. Skyscraper Core Shaft (Gold inner core representing structural spine)
-    const coreGeom = new THREE.CylinderGeometry(0.8, 1.2, 18, 8);
-    const coreMesh = new THREE.Mesh(coreGeom, coreMaterial);
-    coreMesh.position.y = 9;
-    mainGroup.add(coreMesh);
+    // Wireframe Materials
+    const cyanWireMaterial = new THREE.LineBasicMaterial({
+        color: 0x00d2ff,
+        transparent: true,
+        opacity: 0.75,
+        clippingPlanes: [wireframeClipPlane]
+    });
+    const goldWireMaterial = new THREE.LineBasicMaterial({
+        color: 0xd4af37,
+        transparent: true,
+        opacity: 0.95,
+        linewidth: 1.5,
+        clippingPlanes: [wireframeClipPlane]
+    });
 
-    // 2. Build Twisting Hexagonal Tower plates and Exoskeleton
-    const floorCount = 28;
-    const floorHeight = 18 / floorCount;
-    const towerPoints = []; // for particles mode
+    // 2. Define Modernist Villa Components
+    const components = [];
 
-    const glassFloors = [];
-    
-    // Hexagonal geometry blueprint coordinates for exoskeleton tracing
-    const floorVertices = [];
+    // Base Slab
+    components.push({
+        geom: new THREE.BoxGeometry(7.0, 0.2, 5.5),
+        pos: new THREE.Vector3(0, 0.1, 0),
+        type: 'base'
+    });
 
-    for (let i = 0; i < floorCount; i++) {
-        const y = i * floorHeight;
-        const twist = i * 0.08;
-        const r = 3.2 * (1 - (i / 35) * 0.2);
+    // Back Wall (H = 3.5)
+    components.push({
+        geom: new THREE.BoxGeometry(6.6, 3.5, 0.25),
+        pos: new THREE.Vector3(0, 1.75, -2.5),
+        type: 'wall',
+        height: 3.5
+    });
 
-        // A. Solid Glass Floor Plates
-        const floorGeom = new THREE.CylinderGeometry(r, r, floorHeight * 0.8, 6, 1);
-        const floorMesh = new THREE.Mesh(floorGeom, glassMaterial);
-        floorMesh.position.y = y + (floorHeight / 2);
-        floorMesh.rotation.y = twist;
-        solidGlassGroup.add(floorMesh);
-        glassFloors.push(floorMesh);
+    // Left Wall (H = 3.5)
+    components.push({
+        geom: new THREE.BoxGeometry(0.25, 3.5, 5.0),
+        pos: new THREE.Vector3(-3.2, 1.75, 0),
+        type: 'wall',
+        height: 3.5
+    });
 
-        // Store corner coordinates for drawing Exoskeleton
-        const corners = [];
-        for (let j = 0; j < 6; j++) {
-            const a = j * (Math.PI / 3) + twist;
-            const px = Math.cos(a) * r;
-            const pz = Math.sin(a) * r;
-            const py = y;
-            corners.push(new THREE.Vector3(px, py, pz));
-            
-            // Store for Particle Cloud
-            towerPoints.push(px, py, pz);
-        }
-        floorVertices.push(corners);
+    // Front Partition Wall (H = 3.5)
+    components.push({
+        geom: new THREE.BoxGeometry(2.5, 3.5, 0.25),
+        pos: new THREE.Vector3(1.975, 1.75, 2.5),
+        type: 'wall',
+        height: 3.5
+    });
 
-        // Add some inner points for particle density
-        for (let rFactor = 0.3; rFactor < 1.0; rFactor += 0.35) {
-            const ir = r * rFactor;
-            for (let j = 0; j < 6; j++) {
-                const a = j * (Math.PI / 3) + twist + (rFactor * 0.15);
-                towerPoints.push(Math.cos(a) * ir, y, Math.sin(a) * ir);
+    // Interior Wall (H = 3.5)
+    components.push({
+        geom: new THREE.BoxGeometry(0.25, 3.5, 2.5),
+        pos: new THREE.Vector3(0.5, 1.75, -1.25),
+        type: 'wall',
+        height: 3.5
+    });
+
+    // Column 1 (H = 3.5)
+    components.push({
+        geom: new THREE.CylinderGeometry(0.08, 0.08, 3.5, 12),
+        pos: new THREE.Vector3(3.2, 1.75, 2.5),
+        type: 'column',
+        height: 3.5
+    });
+
+    // Column 2 (H = 3.5)
+    components.push({
+        geom: new THREE.CylinderGeometry(0.08, 0.08, 3.5, 12),
+        pos: new THREE.Vector3(-3.2, 1.75, 2.5),
+        type: 'column',
+        height: 3.5
+    });
+
+    // Front Window Glass (H = 3.2)
+    components.push({
+        geom: new THREE.BoxGeometry(3.5, 3.2, 0.08),
+        pos: new THREE.Vector3(-1.0, 1.6, 2.5),
+        type: 'window',
+        height: 3.2
+    });
+
+    // Right Side Window Glass (H = 3.2)
+    components.push({
+        geom: new THREE.BoxGeometry(0.08, 3.2, 3.5),
+        pos: new THREE.Vector3(3.2, 1.6, 0),
+        type: 'window',
+        height: 3.2
+    });
+
+    // Overhanging Roof Canopy (Flat roof)
+    components.push({
+        geom: new THREE.BoxGeometry(7.4, 0.2, 5.7),
+        pos: new THREE.Vector3(0, 3.6, 0),
+        type: 'roof'
+    });
+
+    // Sofa Base
+    components.push({
+        geom: new THREE.BoxGeometry(2.0, 0.4, 0.9),
+        pos: new THREE.Vector3(-1.5, 0.3, -0.5),
+        type: 'furniture'
+    });
+
+    // Sofa Backrest
+    components.push({
+        geom: new THREE.BoxGeometry(2.0, 0.7, 0.25),
+        pos: new THREE.Vector3(-1.5, 0.65, -0.95),
+        type: 'furniture'
+    });
+
+    // Coffee Table
+    components.push({
+        geom: new THREE.BoxGeometry(1.0, 0.4, 0.6),
+        pos: new THREE.Vector3(-1.5, 0.3, 0.6),
+        type: 'furniture'
+    });
+
+    // Plant Vase
+    components.push({
+        geom: new THREE.CylinderGeometry(0.2, 0.12, 0.8, 12),
+        pos: new THREE.Vector3(2.5, 0.5, 1.2),
+        type: 'furniture'
+    });
+
+    // Kitchen Counter
+    components.push({
+        geom: new THREE.BoxGeometry(0.8, 0.9, 2.0),
+        pos: new THREE.Vector3(2.4, 0.55, -1.2),
+        type: 'furniture'
+    });
+
+    // Generate Solid & Wireframe layers
+    const solidMeshes = [];
+    const wireframeMeshes = [];
+    const villaPoints = []; // for particles mode
+
+    components.forEach(comp => {
+        // Choose solid material
+        let mat = wallSolidMaterial;
+        if (comp.type === 'base') mat = baseSolidMaterial;
+        else if (comp.type === 'column' || comp.type === 'roof' || comp.type === 'furniture') mat = goldMetalMaterial;
+        else if (comp.type === 'window') mat = blueGlassMaterial;
+
+        // Solid Mesh
+        const mesh = new THREE.Mesh(comp.geom, mat);
+        mesh.position.copy(comp.pos);
+        solidGlassGroup.add(mesh);
+        
+        solidMeshes.push({
+            mesh: mesh,
+            basePos: comp.pos.clone(),
+            type: comp.type,
+            height: comp.height || 0
+        });
+
+        // Wireframe Line segments
+        const edges = new THREE.EdgesGeometry(comp.geom);
+        let wireMat = cyanWireMaterial;
+        if (comp.type === 'column' || comp.type === 'roof' || comp.type === 'furniture') wireMat = goldWireMaterial;
+
+        const line = new THREE.LineSegments(edges, wireMat);
+        line.position.copy(comp.pos);
+        wireframeGroup.add(line);
+
+        wireframeMeshes.push({
+            line: line,
+            basePos: comp.pos.clone(),
+            type: comp.type,
+            height: comp.height || 0
+        });
+
+        // Collect points for Particle Cloud
+        const posAttr = edges.attributes.position;
+        if (posAttr) {
+            for (let i = 0; i < posAttr.count; i++) {
+                const vx = posAttr.getX(i) + comp.pos.x;
+                const vy = posAttr.getY(i) + comp.pos.y;
+                const vz = posAttr.getZ(i) + comp.pos.z;
+                villaPoints.push(vx, vy, vz);
             }
         }
-    }
-
-    // Interpolate edge points for high density particle cloud
-    for (let i = 0; i < floorCount; i++) {
-        const y = i * floorHeight;
-        const twist = i * 0.08;
-        const r = 3.2 * (1 - (i / 35) * 0.2);
-        
-        for (let j = 0; j < 6; j++) {
-            const a1 = j * (Math.PI / 3) + twist;
-            const a2 = ((j + 1) % 6) * (Math.PI / 3) + twist;
-            
-            const x1 = Math.cos(a1) * r;
-            const z1 = Math.sin(a1) * r;
-            const x2 = Math.cos(a2) * r;
-            const z2 = Math.sin(a2) * r;
-            
-            for (let k = 1; k < 5; k++) {
-                const t = k / 5;
-                towerPoints.push(
-                    x1 + (x2 - x1) * t,
-                    y,
-                    z1 + (z2 - z1) * t
-                );
-            }
-        }
-    }
-
-    // B. Build Diagrid Exoskeleton lines
-    const exoPoints = [];
-    const diagPoints = [];
-
-    for (let i = 0; i < floorCount - 1; i++) {
-        const c1 = floorVertices[i];
-        const c2 = floorVertices[i + 1];
-        
-        for (let j = 0; j < 6; j++) {
-            const p1 = c1[j];
-            const p2_same = c2[j];
-            const p2_next = c2[(j + 1) % 6];
-            const p2_prev = c2[(j + 5) % 6];
-
-            // Vertical / twist frame columns
-            exoPoints.push(p1, p2_same);
-
-            // Diagonal bracing structural lines
-            diagPoints.push(p1, p2_next);
-            diagPoints.push(p1, p2_prev);
-        }
-    }
-
-    const exoGeom = new THREE.BufferGeometry().setFromPoints(exoPoints);
-    const exoLines = new THREE.LineSegments(exoGeom, goldWireMaterial);
-    wireframeGroup.add(exoLines);
-
-    const diagGeom = new THREE.BufferGeometry().setFromPoints(diagPoints);
-    const diagLines = new THREE.LineSegments(diagGeom, blueWireMaterial);
-    wireframeGroup.add(diagLines);
+    });
 
     // 3. Digital Twin Particle Cloud
-    const towerParticleGeom = new THREE.BufferGeometry();
-    towerParticleGeom.setAttribute('position', new THREE.Float32BufferAttribute(towerPoints, 3));
+    const villaParticleGeom = new THREE.BufferGeometry();
+    villaParticleGeom.setAttribute('position', new THREE.Float32BufferAttribute(villaPoints, 3));
     
-    const towerParticleMat = new THREE.PointsMaterial({
-        color: 0x0077ff,
-        size: 0.16,
+    const villaParticleMat = new THREE.PointsMaterial({
+        color: 0x00d2ff,
+        size: 0.15,
         transparent: true,
         opacity: 0.85,
         blending: THREE.AdditiveBlending
     });
-    const towerParticleSystem = new THREE.Points(towerParticleGeom, towerParticleMat);
-    towerParticleSystem.visible = false; // Hidden by default (activated in particles mode)
-    mainGroup.add(towerParticleSystem);
+    const villaParticleSystem = new THREE.Points(villaParticleGeom, villaParticleMat);
+    villaParticleSystem.visible = false; // Activated only in particles mode
+    mainGroup.add(villaParticleSystem);
 
-    // 4. Holographic Scanner Ring (Sweeps up/down the tower)
-    const scannerRingGeom = new THREE.TorusGeometry(3.8, 0.08, 16, 64);
+    // 4. Holographic Scanner Ring/Line (Vertical scanner sweeping horizontally)
+    const scannerRingGeom = new THREE.TorusGeometry(4.2, 0.06, 16, 100);
     const scannerRingMat = new THREE.MeshStandardMaterial({
         color: 0xd4af37,
         emissive: 0xd4af37,
@@ -207,37 +297,63 @@ function initHero3D() {
         opacity: 0.95
     });
     const scannerRing = new THREE.Mesh(scannerRingGeom, scannerRingMat);
-    scannerRing.rotation.x = Math.PI / 2;
-    // We add the scanner ring directly to the scene so it stays level and only slides up/down
+    scannerRing.rotation.y = Math.PI / 2; // Make it vertical (YZ plane)
+    scannerRing.position.y = 1.8;
     scene.add(scannerRing);
 
     // Glowing laser scanner plane inside the ring
-    const scanPlaneGeom = new THREE.CylinderGeometry(3.7, 3.7, 0.04, 32);
+    const scanPlaneGeom = new THREE.CylinderGeometry(4.1, 4.1, 0.05, 32);
     const scanPlaneMat = new THREE.MeshBasicMaterial({
         color: 0xd4af37,
         transparent: true,
-        opacity: 0.18,
+        opacity: 0.16,
         side: THREE.DoubleSide
     });
     const scanPlane = new THREE.Mesh(scanPlaneGeom, scanPlaneMat);
+    scanPlane.rotation.z = Math.PI / 2; // Align inside YZ plane of torus
     scannerRing.add(scanPlane);
 
-    // 5. Floating Ambient Gold Dust Particles
-    const particleCount = 200;
+    // 5. 2D Blueprint Layout Glowing cyan lines on the ground
+    const blueprintLinesGroup = new THREE.Group();
+    blueprintLinesGroup.position.y = 0.02;
+    mainGroup.add(blueprintLinesGroup);
+
+    const blueGlowMaterial = new THREE.LineBasicMaterial({
+        color: 0x00d2ff,
+        transparent: true,
+        opacity: 0.75,
+        linewidth: 2.0
+    });
+
+    const wallLines = [
+        [new THREE.Vector3(-3.2, 0, -2.5), new THREE.Vector3(3.2, 0, -2.5)],
+        [new THREE.Vector3(-3.2, 0, -2.5), new THREE.Vector3(-3.2, 0, 2.5)],
+        [new THREE.Vector3(0.75, 0, 2.5), new THREE.Vector3(3.2, 0, 2.5)],
+        [new THREE.Vector3(0.5, 0, 0), new THREE.Vector3(0.5, 0, -2.5)]
+    ];
+
+    wallLines.forEach(linePoints => {
+        const lineGeom = new THREE.BufferGeometry().setFromPoints(linePoints);
+        const line = new THREE.Line(lineGeom, blueGlowMaterial);
+        blueprintLinesGroup.add(line);
+    });
+
+    // 6. Floating Ambient Gold Dust Particles
+    const particleCount = 150;
     const particleGeom = new THREE.BufferGeometry();
     const particlePositions = new Float32Array(particleCount * 3);
     const particleSpeeds = [];
 
     for (let i = 0; i < particleCount * 3; i += 3) {
         const theta = Math.random() * Math.PI * 2;
-        const radius = 4.0 + Math.random() * 10;
+        const radius = 5.0 + Math.random() * 8;
         particlePositions[i] = Math.cos(theta) * radius;
-        particlePositions[i + 1] = Math.random() * 24 - 2;
+        particlePositions[i + 1] = Math.random() * 16 - 1;
         particlePositions[i + 2] = Math.sin(theta) * radius;
 
         particleSpeeds.push([
-            0.01 + Math.random() * 0.03,
-            0.02 + Math.random() * 0.04,
+            0.01 + Math.random() * 0.02,
+            0.02 + Math.random() * 0.03,
             0.01 + Math.random() * 0.02,
             Math.random() * Math.PI * 2
         ]);
@@ -246,66 +362,51 @@ function initHero3D() {
     particleGeom.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
     const particleMaterial = new THREE.PointsMaterial({
         color: 0xffdf7a,
-        size: 0.15,
+        size: 0.14,
         transparent: true,
-        opacity: 0.8,
+        opacity: 0.7,
         blending: THREE.AdditiveBlending
     });
     const particleSystem = new THREE.Points(particleGeom, particleMaterial);
     scene.add(particleSystem);
 
-    // 6. Holographic Ground Blueprint Table (Grid & Concentric Sectors)
+    // 7. Holographic Ground Blueprint Table Grid
     const blueprintGroup = new THREE.Group();
-    blueprintGroup.position.y = 0.02;
+    blueprintGroup.position.y = 0.01;
     mainGroup.add(blueprintGroup);
 
-    const blueGrid = new THREE.GridHelper(26, 26, 0xd4af37, 0x0077ff);
+    const blueGrid = new THREE.GridHelper(22, 22, 0xd4af37, 0x0077ff);
     blueGrid.material.transparent = true;
-    blueGrid.material.opacity = 0.25;
+    blueGrid.material.opacity = 0.2;
     blueprintGroup.add(blueGrid);
 
-    // Circles on blueprint table
-    const ringParams = [5.5, 9.0, 12.5];
-    ringParams.forEach(radius => {
-        const ringGeom = new THREE.RingGeometry(radius - 0.06, radius + 0.06, 64);
-        const ringMat = new THREE.MeshBasicMaterial({
-            color: 0x0077ff,
-            transparent: true,
-            opacity: 0.2,
-            side: THREE.DoubleSide
-        });
-        const ringMesh = new THREE.Mesh(ringGeom, ringMat);
-        ringMesh.rotation.x = Math.PI / 2;
-        blueprintGroup.add(ringMesh);
-    });
-
-    // 7. Active Construction Ground Crane (at the side of blueprint grid)
+    // 8. Active Construction Crane at the side
     const craneGroup = new THREE.Group();
-    craneGroup.position.set(5.5, 0, -5.5);
+    craneGroup.position.set(5.5, 0, -4.5);
     mainGroup.add(craneGroup);
 
-    const craneTowerGeom = new THREE.CylinderGeometry(0.1, 0.1, 7.5, 8);
+    const craneTowerGeom = new THREE.CylinderGeometry(0.08, 0.08, 7.5, 8);
     const craneTowerEdges = new THREE.EdgesGeometry(craneTowerGeom);
     const craneTower = new THREE.LineSegments(craneTowerEdges, goldWireMaterial);
     craneTower.position.y = 3.75;
     craneGroup.add(craneTower);
 
-    const craneJibGeom = new THREE.BoxGeometry(6.5, 0.18, 0.18);
+    const craneJibGeom = new THREE.BoxGeometry(6.0, 0.16, 0.16);
     const craneJibEdges = new THREE.EdgesGeometry(craneJibGeom);
     const craneJib = new THREE.LineSegments(craneJibEdges, goldWireMaterial);
-    craneJib.position.set(-2, 7.5, 0); // extends towards building
+    craneJib.position.set(-1.8, 7.5, 0); // extends towards villa
     craneGroup.add(craneJib);
 
     const cableGeom = new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(-4, 7.5, 0),
-        new THREE.Vector3(-4, 3, 0)
+        new THREE.Vector3(-3.5, 7.5, 0),
+        new THREE.Vector3(-3.5, 3.0, 0)
     ]);
     const cable = new THREE.Line(cableGeom, goldWireMaterial);
     craneGroup.add(cable);
 
-    const loadGeom = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+    const loadGeom = new THREE.BoxGeometry(0.4, 0.4, 0.4);
     const loadMesh = new THREE.Mesh(loadGeom, coreMaterial);
-    loadMesh.position.set(-4, 2.7, 0);
+    loadMesh.position.set(-3.5, 2.8, 0);
     craneGroup.add(loadMesh);
 
     // Exposed Global Mode Swapper
@@ -313,19 +414,19 @@ function initHero3D() {
         if (mode === 'wireframe') {
             solidGlassGroup.visible = false;
             wireframeGroup.visible = true;
-            towerParticleSystem.visible = false;
+            villaParticleSystem.visible = false;
             particleSystem.visible = true;
             scannerRing.visible = true;
         } else if (mode === 'glass') {
             solidGlassGroup.visible = true;
             wireframeGroup.visible = true;
-            towerParticleSystem.visible = false;
+            villaParticleSystem.visible = false;
             particleSystem.visible = true;
             scannerRing.visible = true;
         } else if (mode === 'particles') {
             solidGlassGroup.visible = false;
             wireframeGroup.visible = false;
-            towerParticleSystem.visible = true;
+            villaParticleSystem.visible = true;
             particleSystem.visible = true;
             scannerRing.visible = true;
         }
@@ -361,49 +462,129 @@ function initHero3D() {
 
     const clock = new THREE.Clock();
 
+    // Helper to dynamically size components during extrusion cycle
+    function updateComponentState(obj, basePos, type, height, s) {
+        if (type === 'base') {
+            obj.position.copy(basePos);
+            obj.scale.set(1, 1, 1);
+            obj.visible = true;
+        } else if (type === 'wall' || type === 'window' || type === 'column') {
+            obj.scale.set(1, s, 1);
+            obj.position.set(basePos.x, (height / 2) * s, basePos.z);
+            obj.visible = s > 0.02;
+        } else if (type === 'roof') {
+            if (s < 0.4) {
+                obj.visible = false;
+            } else {
+                obj.visible = true;
+                const roofS = (s - 0.4) / 0.6; // goes 0 to 1
+                obj.position.set(basePos.x, basePos.y + (1 - roofS) * 6, basePos.z);
+                obj.scale.set(1, 1, 1);
+            }
+        } else if (type === 'furniture') {
+            if (s < 0.6) {
+                obj.visible = false;
+            } else {
+                obj.visible = true;
+                const furnS = (s - 0.6) / 0.4; // goes 0 to 1
+                obj.position.set(basePos.x, basePos.y + (1 - furnS) * 4, basePos.z);
+                obj.scale.set(1, 1, 1);
+            }
+        }
+    }
+
     function animate() {
         requestAnimationFrame(animate);
 
         const elapsedTime = clock.getElapsedTime();
 
-        // 1. Slow Y rotation of Twist Skyscraper & Exoskeleton
-        mainGroup.rotation.y = elapsedTime * 0.06;
+        // Cycles parameters: 12 seconds loop
+        const t = elapsedTime % 12;
+        let s = 1.0;      // Extrusion progress (scale Y)
+        let scanX = 0.0;  // Scan line position X
 
-        // 2. Holographic Scanner Ring vertical sweep (Sweeps between y=0.5 and y=17.5)
-        scannerRing.position.y = 9 + Math.sin(elapsedTime * 0.7) * 8.5;
+        if (t < 2.0) {
+            // Phase 1: 2D blueprint layout (2s)
+            s = 0.01;
+            scanX = -6.0;
+            scannerRing.visible = false;
+        } else if (t < 6.0) {
+            // Phase 2: Wall Extrusion & Building (4s)
+            const progress = (t - 2.0) / 4.0;
+            s = 0.01 + progress * 0.99;
+            scanX = -6.0;
+            scannerRing.visible = false;
+        } else if (t < 10.0) {
+            // Phase 3: Laser scan render sweep (4s)
+            s = 1.0;
+            scannerRing.visible = true;
+            const progress = (t - 6.0) / 4.0;
+            // Sweep scan line back and forth
+            scanX = -5.0 + progress * 11.0;
+        } else {
+            // Phase 4: Showcase fully rendered room (2s)
+            s = 1.0;
+            scanX = 6.0;
+            scannerRing.visible = false;
+        }
 
-        // 3. Crane arm rotation & load hoisting
-        craneGroup.rotation.y = Math.sin(elapsedTime * 0.15) * 0.45;
-        loadMesh.position.y = 2.6 + Math.sin(elapsedTime * 1.2) * 0.35;
+        // Apply local clipping plane properties based on scanX position
+        solidClipPlane.constant = scanX;
+        wireframeClipPlane.constant = -scanX;
+
+        // Position the scanning torus ring
+        scannerRing.position.x = scanX;
+
+        // Extrude & reposition components for solid/wireframe layers dynamically
+        solidMeshes.forEach(item => {
+            updateComponentState(item.mesh, item.basePos, item.type, item.height, s);
+        });
+
+        wireframeMeshes.forEach(item => {
+            updateComponentState(item.line, item.basePos, item.type, item.height, s);
+        });
+
+        // Extrude particle system for Digital Twin mode
+        if (villaParticleSystem.visible) {
+            villaParticleSystem.scale.set(1, s, 1);
+            villaParticleSystem.position.y = 1.8 * (s - 1);
+        }
+
+        // Slow Y rotation of blueprint/villa setup
+        mainGroup.rotation.y = elapsedTime * 0.04;
+
+        // Crane arm rotation & load hoisting
+        craneGroup.rotation.y = Math.sin(elapsedTime * 0.12) * 0.4;
+        loadMesh.position.y = 2.7 + Math.sin(elapsedTime * 1.0) * 0.3;
         const cablePosAttr = cable.geometry.attributes.position;
-        cablePosAttr.setY(1, 2.6 + Math.sin(elapsedTime * 1.2) * 0.35);
+        cablePosAttr.setY(1, 2.7 + Math.sin(elapsedTime * 1.0) * 0.3);
         cablePosAttr.needsUpdate = true;
 
-        // 4. Ambient particles field drift
+        // Ambient particles field drift
         const posAttr = particleSystem.geometry.attributes.position;
         for (let i = 0; i < particleCount; i++) {
             const idx = i * 3;
             const speedData = particleSpeeds[i];
 
             posAttr.array[idx + 1] += speedData[0];
-            if (posAttr.array[idx + 1] > 22) {
-                posAttr.array[idx + 1] = -2;
+            if (posAttr.array[idx + 1] > 15) {
+                posAttr.array[idx + 1] = -1;
             }
 
             const phase = speedData[3] + elapsedTime * speedData[1];
-            const currentRadius = 4.0 + Math.sin(elapsedTime * speedData[2] + speedData[3]) * 1.5;
+            const currentRadius = 5.0 + Math.sin(elapsedTime * speedData[2] + speedData[3]) * 1.5;
             posAttr.array[idx] = Math.cos(phase) * currentRadius;
             posAttr.array[idx + 2] = Math.sin(phase) * currentRadius;
         }
         posAttr.needsUpdate = true;
 
-        // 5. Parallax tilt
+        // Parallax tilt based on mouse position
         targetX += (mouseX - targetX) * 0.04;
         targetY += (mouseY - targetY) * 0.04;
 
-        mainGroup.rotation.x = targetY * 0.06;
-        mainGroup.rotation.z = -targetX * 0.06;
-        mainGroup.position.y = Math.sin(elapsedTime * 0.3) * 0.15 - 0.2;
+        mainGroup.rotation.x = targetY * 0.05;
+        mainGroup.rotation.z = -targetX * 0.05;
+        mainGroup.position.y = Math.sin(elapsedTime * 0.35) * 0.12;
 
         renderer.render(scene, camera);
     }
