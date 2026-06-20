@@ -1,8 +1,10 @@
 // Upgraded 3D Visualizations using Three.js with mode switching - Coohom BIM Edition
 
-document.addEventListener('DOMContentLoaded', () => {
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
     initHero3D();
-});
+} else {
+    document.addEventListener('DOMContentLoaded', initHero3D);
+}
 
 // Global state for modal canvases to manage resizing and memory cleanup
 let activeModalRenderers = {};
@@ -11,6 +13,10 @@ let activeModalRenderers = {};
  * Initializes the premium 3D Coohom-style BIM Extruder & Laser Render Sweep in the Hero Section
  */
 function initHero3D() {
+    if (typeof THREE === 'undefined') {
+        console.error("Three.js not loaded. Hero 3D simulation aborted.");
+        return;
+    }
     const container = document.getElementById('hero-canvas-container');
     const canvas = document.getElementById('hero-canvas');
     if (!canvas || !container) return;
@@ -405,7 +411,7 @@ function initHero3D() {
     craneGroup.add(cable);
 
     const loadGeom = new THREE.BoxGeometry(0.4, 0.4, 0.4);
-    const loadMesh = new THREE.Mesh(loadGeom, coreMaterial);
+    const loadMesh = new THREE.Mesh(loadGeom, goldMetalMaterial);
     loadMesh.position.set(-3.5, 2.8, 0);
     craneGroup.add(loadMesh);
 
@@ -596,6 +602,10 @@ function initHero3D() {
  * Initializes the detailed 3D model for specific project types in their details modals
  */
 function initProject3D(canvasId, projectType) {
+    if (typeof THREE === 'undefined') {
+        console.error("Three.js not loaded. Project 3D simulation aborted.");
+        return;
+    }
     const canvas = document.getElementById(canvasId);
     if (!canvas) return;
 

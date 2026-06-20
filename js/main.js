@@ -1,6 +1,6 @@
 // Upgraded Website Interactions & Animations with Estimator and Roadmap Stepper
 
-document.addEventListener('DOMContentLoaded', () => {
+function initMainApp() {
     // Register GSAP plugins
     if (typeof gsap !== 'undefined' && typeof ScrollTrigger !== 'undefined') {
         gsap.registerPlugin(ScrollTrigger);
@@ -52,7 +52,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 12. NEW: Interactive Construction Steps Roadmap Stepper
     setupRoadmapStepper();
-});
+}
+
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    initMainApp();
+} else {
+    document.addEventListener('DOMContentLoaded', initMainApp);
+}
+
 
 /**
  * Tracks the mouse position over cards to update CSS variables for radial spotlight glows
