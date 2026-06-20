@@ -1,4 +1,4 @@
-// 3D Visualizations using Three.js
+// Upgraded 3D Visualizations using Three.js with mode switching
 
 document.addEventListener('DOMContentLoaded', () => {
     initHero3D();
@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
 let activeModalRenderers = {};
 
 /**
- * Initializes the 3D skyscraper visualizer in the Hero Section
+ * Initializes the premium 3D skyscraper and particle field in the Hero Section
  */
 function initHero3D() {
     const container = document.getElementById('hero-canvas-container');
@@ -17,12 +17,12 @@ function initHero3D() {
 
     // Scene setup
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x030712, 0.0015);
+    scene.fog = new THREE.FogExp2(0x02050e, 0.002);
 
     // Camera setup
-    const camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
-    camera.position.set(0, 5, 25);
-    camera.lookAt(0, 5, 0);
+    const camera = new THREE.PerspectiveCamera(55, container.clientWidth / container.clientHeight, 0.1, 1000);
+    camera.position.set(0, 7, 28);
+    camera.lookAt(0, 7, 0);
 
     // Renderer setup
     const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
@@ -31,148 +31,222 @@ function initHero3D() {
     renderer.shadowMap.enabled = true;
 
     // Lights
-    const ambientLight = new THREE.AmbientLight(0x0a142c, 1.5);
+    const ambientLight = new THREE.AmbientLight(0x0f1c34, 1.8);
     scene.add(ambientLight);
 
-    const dirLight1 = new THREE.DirectionalLight(0xd4af37, 3); // Gold light
-    dirLight1.position.set(10, 20, 10);
+    const dirLight1 = new THREE.DirectionalLight(0xd4af37, 4); // Rich Gold Up Light
+    dirLight1.position.set(15, 25, 15);
     scene.add(dirLight1);
 
-    const dirLight2 = new THREE.DirectionalLight(0x0077ff, 2); // Blue accent light
-    dirLight2.position.set(-10, 5, -10);
+    const dirLight2 = new THREE.DirectionalLight(0x0077ff, 2.5); // Deep Blue Counter Light
+    dirLight2.position.set(-15, 10, -15);
     scene.add(dirLight2);
 
-    const pointLight = new THREE.PointLight(0xd4af37, 2, 50);
-    pointLight.position.set(0, 10, 0);
-    scene.add(pointLight);
+    // Spotlight pointing at the building for dramatic shadows/lighting
+    const spotLight = new THREE.SpotLight(0xd4af37, 5, 50, Math.PI / 4, 0.5, 1);
+    spotLight.position.set(0, 25, 0);
+    scene.add(spotLight);
 
-    // Creating the Architectural Skyscraper Model Group
-    const skyscraperGroup = new THREE.Group();
-    scene.add(skyscraperGroup);
+    // Main Group to hold the skyscraper and its components
+    const mainGroup = new THREE.Group();
+    scene.add(mainGroup);
 
-    // Color materials
-    const goldWireMaterial = new THREE.LineBasicMaterial({ color: 0xd4af37, transparent: true, opacity: 0.8 });
-    const blueWireMaterial = new THREE.LineBasicMaterial({ color: 0x0077ff, transparent: true, opacity: 0.4 });
-    const solidGlassMaterial = new THREE.MeshStandardMaterial({
-        color: 0x0b1528,
-        roughness: 0.1,
-        metalness: 0.9,
+    // Subgroups for mode switching
+    const solidGlassGroup = new THREE.Group();
+    const wireframeGroup = new THREE.Group();
+    mainGroup.add(solidGlassGroup);
+    mainGroup.add(wireframeGroup);
+
+    // Materials
+    const goldWireMaterial = new THREE.LineBasicMaterial({ color: 0xd4af37, transparent: true, opacity: 0.85, linewidth: 1.5 });
+    const blueWireMaterial = new THREE.LineBasicMaterial({ color: 0x0077ff, transparent: true, opacity: 0.45 });
+    const glassMaterial = new THREE.MeshStandardMaterial({
+        color: 0x070e1c,
+        roughness: 0.05,
+        metalness: 0.95,
         transparent: true,
-        opacity: 0.25,
-        flatShading: true
+        opacity: 0.35,
+        flatShading: true,
+        side: THREE.DoubleSide
     });
-    const glowingCoreMaterial = new THREE.MeshStandardMaterial({
+    const coreMaterial = new THREE.MeshStandardMaterial({
         color: 0xd4af37,
         emissive: 0xd4af37,
-        emissiveIntensity: 0.8,
+        emissiveIntensity: 1.0,
         transparent: true,
-        opacity: 0.7
+        opacity: 0.8
     });
 
-    // 1. Core elevator shaft (Glowing gold column inside)
-    const coreGeom = new THREE.BoxGeometry(1.5, 18, 1.5);
-    const coreMesh = new THREE.Mesh(coreGeom, glowingCoreMaterial);
-    coreMesh.position.y = 9;
-    skyscraperGroup.add(coreMesh);
+    // 1. Skyscraper Core Shaft
+    const coreGeom = new THREE.BoxGeometry(1.2, 20, 1.2);
+    const coreMesh = new THREE.Mesh(coreGeom, coreMaterial);
+    coreMesh.position.y = 10;
+    // Core is visible in all modes
+    mainGroup.add(coreMesh);
 
-    // 2. Primary outer building blocks (Futuristic stacked offset design)
+    // 2. Multi-tier Architectural Block Tower
     const blockConfigs = [
-        { w: 6, h: 6, d: 6, y: 3, rot: 0 },
-        { w: 5, h: 5, d: 5, y: 8.5, rot: Math.PI / 8 },
-        { w: 4, h: 4, d: 4, y: 13, rot: -Math.PI / 8 },
-        { w: 3, h: 4, d: 3, y: 17, rot: Math.PI / 4 }
+        { w: 6.5, h: 5, d: 6.5, y: 2.5, rot: 0 },
+        { w: 5.5, h: 5, d: 5.5, y: 7.5, rot: Math.PI / 10 },
+        { w: 4.5, h: 5, d: 4.5, y: 12.5, rot: -Math.PI / 10 },
+        { w: 3.5, h: 5, d: 3.5, y: 17.5, rot: Math.PI / 5 }
     ];
 
     blockConfigs.forEach(config => {
-        // Solid semi-transparent glass mesh
+        // Semi-transparent solid glass block (added to solidGlassGroup)
         const geom = new THREE.BoxGeometry(config.w, config.h, config.d);
-        const mesh = new THREE.Mesh(geom, solidGlassMaterial);
+        const mesh = new THREE.Mesh(geom, glassMaterial);
         mesh.position.y = config.y;
         mesh.rotation.y = config.rot;
-        skyscraperGroup.add(mesh);
+        solidGlassGroup.add(mesh);
 
-        // Gold frame outline
+        // Gold frame outlines (added to wireframeGroup)
         const edges = new THREE.EdgesGeometry(geom);
         const line = new THREE.LineSegments(edges, goldWireMaterial);
         line.position.y = config.y;
         line.rotation.y = config.rot;
-        skyscraperGroup.add(line);
+        wireframeGroup.add(line);
 
-        // Inside structural grid (blue lines)
-        const gridGeom = new THREE.BoxGeometry(config.w - 0.2, config.h - 0.2, config.d - 0.2);
-        const gridEdges = new THREE.EdgesGeometry(gridGeom);
-        const gridLines = new THREE.LineSegments(gridEdges, blueWireMaterial);
-        gridLines.position.y = config.y;
-        gridLines.rotation.y = config.rot;
-        skyscraperGroup.add(gridLines);
+        // Sub-structural blue lines (added to wireframeGroup)
+        const innerGeom = new THREE.BoxGeometry(config.w - 0.3, config.h - 0.1, config.d - 0.3);
+        const innerEdges = new THREE.EdgesGeometry(innerGeom);
+        const innerLines = new THREE.LineSegments(innerEdges, blueWireMaterial);
+        innerLines.position.y = config.y;
+        innerLines.rotation.y = config.rot;
+        wireframeGroup.add(innerLines);
+
+        // Diagonal bracing lines (added to wireframeGroup)
+        const diagonalLines = createXBracing(config.w, config.h, config.d, goldWireMaterial);
+        diagonalLines.position.y = config.y;
+        diagonalLines.rotation.y = config.rot;
+        wireframeGroup.add(diagonalLines);
     });
 
-    // 3. Add node points (small glowing spheres at intersections to represent joint lights)
-    const pointGeom = new THREE.BufferGeometry();
-    const pointPositions = [];
-    
-    // Generate random star-like points around the building representing digital crane nodes or floating coordinates
-    for (let i = 0; i < 150; i++) {
-        const theta = Math.random() * Math.PI * 2;
-        const radius = 4 + Math.random() * 8;
-        const x = Math.cos(theta) * radius;
-        const y = Math.random() * 22;
-        const z = Math.sin(theta) * radius;
-        pointPositions.push(x, y, z);
+    // Helper to generate X bracing
+    function createXBracing(w, h, d, material) {
+        const points = [];
+        // Front face diagonals
+        points.push(new THREE.Vector3(-w/2, -h/2, d/2), new THREE.Vector3(w/2, h/2, d/2));
+        points.push(new THREE.Vector3(w/2, -h/2, d/2), new THREE.Vector3(-w/2, h/2, d/2));
+        // Back face diagonals
+        points.push(new THREE.Vector3(-w/2, -h/2, -d/2), new THREE.Vector3(w/2, h/2, -d/2));
+        points.push(new THREE.Vector3(w/2, -h/2, -d/2), new THREE.Vector3(-w/2, h/2, -d/2));
+        
+        const geom = new THREE.BufferGeometry().setFromPoints(points);
+        return new THREE.LineSegments(geom, material);
     }
-    
-    pointGeom.setAttribute('position', new THREE.Float32BufferAttribute(pointPositions, 3));
-    const pointMaterial = new THREE.PointsMaterial({
-        color: 0xd4af37,
-        size: 0.15,
+
+    // 3. Floating Gold Particles Field (Gold Dust Effect)
+    const particleCount = 280;
+    const particleGeom = new THREE.BufferGeometry();
+    const particlePositions = new Float32Array(particleCount * 3);
+    const particleSpeeds = [];
+
+    for (let i = 0; i < particleCount * 3; i += 3) {
+        const theta = Math.random() * Math.PI * 2;
+        const radius = 3.5 + Math.random() * 12;
+        particlePositions[i] = Math.cos(theta) * radius; // x
+        particlePositions[i + 1] = Math.random() * 26 - 3; // y
+        particlePositions[i + 2] = Math.sin(theta) * radius; // z
+
+        particleSpeeds.push([
+            0.01 + Math.random() * 0.03, // upward vertical speed
+            0.02 + Math.random() * 0.05, // rotation around center
+            0.01 + Math.random() * 0.02, // oscillation speed
+            Math.random() * Math.PI * 2  // phase offset
+        ]);
+    }
+
+    particleGeom.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+    const particleMaterial = new THREE.PointsMaterial({
+        color: 0xffdf7a,
+        size: 0.16,
         transparent: true,
-        opacity: 0.8
+        opacity: 0.9,
+        blending: THREE.AdditiveBlending
     });
-    const points = new THREE.Points(pointGeom, pointMaterial);
-    skyscraperGroup.add(points);
-
-    // 4. Ground decorative construction rings
-    const ringGeom1 = new THREE.RingGeometry(8, 8.2, 32);
-    const ringMat1 = new THREE.MeshBasicMaterial({ color: 0x0077ff, side: THREE.DoubleSide, transparent: true, opacity: 0.3 });
-    const ring1 = new THREE.Mesh(ringGeom1, ringMat1);
-    ring1.rotation.x = Math.PI / 2;
-    ring1.position.y = 0.1;
-    skyscraperGroup.add(ring1);
-
-    const ringGeom2 = new THREE.RingGeometry(11, 11.2, 32);
-    const ringMat2 = new THREE.MeshBasicMaterial({ color: 0xd4af37, side: THREE.DoubleSide, transparent: true, opacity: 0.2 });
-    const ring2 = new THREE.Mesh(ringGeom2, ringMat2);
-    ring2.rotation.x = Math.PI / 2;
-    ring2.position.y = 0.1;
-    skyscraperGroup.add(ring2);
-
-    // 5. Cranes at the top (Architectural construction detail)
-    const craneGroup = new THREE.Group();
-    craneGroup.position.set(0, 19, 0);
     
-    // Tower vertical post
-    const postGeom = new THREE.CylinderGeometry(0.1, 0.1, 3, 8);
-    const postMesh = new THREE.Mesh(postGeom, glowingCoreMaterial);
-    postMesh.position.y = 1.5;
-    craneGroup.add(postMesh);
+    const particleSystem = new THREE.Points(particleGeom, particleMaterial);
+    scene.add(particleSystem);
 
-    // Horizontal jib arm
-    const jibGeom = new THREE.BoxGeometry(4, 0.15, 0.15);
-    const jibMesh = new THREE.Mesh(jibGeom, glowingCoreMaterial);
-    jibMesh.position.set(1.5, 3, 0);
-    craneGroup.add(jibMesh);
+    // 4. Ground laser rings
+    const ringGroup = new THREE.Group();
+    ringGroup.position.y = 0.1;
+    mainGroup.add(ringGroup);
 
-    // Cable line hanging
+    const ringParams = [
+        { r: 8.5, c: 0x0077ff, op: 0.35, rotSpeed: -0.15 },
+        { r: 12.0, c: 0xd4af37, op: 0.20, rotSpeed: 0.08 },
+        { r: 15.0, c: 0x0f1c34, op: 0.40, rotSpeed: -0.05 }
+    ];
+
+    const rings = [];
+    ringParams.forEach(param => {
+        const ringGeom = new THREE.RingGeometry(param.r, param.r + 0.15, 64);
+        const ringMat = new THREE.MeshBasicMaterial({
+            color: param.c,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: param.op
+        });
+        const ringMesh = new THREE.Mesh(ringGeom, ringMat);
+        ringMesh.rotation.x = Math.PI / 2;
+        ringGroup.add(ringMesh);
+        rings.push({ mesh: ringMesh, speed: param.rotSpeed });
+    });
+
+    // 5. Active crane at the top
+    const craneGroup = new THREE.Group();
+    craneGroup.position.set(0, 20, 0);
+
+    const craneTowerGeom = new THREE.CylinderGeometry(0.12, 0.12, 4.5, 8);
+    const craneTowerEdges = new THREE.EdgesGeometry(craneTowerGeom);
+    const craneTower = new THREE.LineSegments(craneTowerEdges, goldWireMaterial);
+    craneTower.position.y = 2.25;
+    craneGroup.add(craneTower);
+
+    const craneJibGeom = new THREE.BoxGeometry(5.5, 0.18, 0.18);
+    const craneJibEdges = new THREE.EdgesGeometry(craneJibGeom);
+    const craneJib = new THREE.LineSegments(craneJibEdges, goldWireMaterial);
+    craneJib.position.set(2, 4.5, 0);
+    craneGroup.add(craneJib);
+
     const cableGeom = new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(3, 3, 0),
-        new THREE.Vector3(3, 1, 0)
+        new THREE.Vector3(4, 4.5, 0),
+        new THREE.Vector3(4, 1.8, 0)
     ]);
     const cable = new THREE.Line(cableGeom, goldWireMaterial);
     craneGroup.add(cable);
 
-    skyscraperGroup.add(craneGroup);
+    const loadGeom = new THREE.BoxGeometry(0.4, 0.4, 0.4);
+    const loadMesh = new THREE.Mesh(loadGeom, coreMaterial);
+    loadMesh.position.set(4, 1.6, 0);
+    craneGroup.add(loadMesh);
 
-    // Mouse movement interaction values
+    // Crane is grouped into wireframes
+    wireframeGroup.add(craneGroup);
+
+    // Global Mode Switch Function exposed to Window
+    window.setSkyscraperMode = (mode) => {
+        if (mode === 'wireframe') {
+            solidGlassGroup.visible = false;
+            wireframeGroup.visible = true;
+            particleSystem.visible = true;
+            spotLight.intensity = 2;
+        } else if (mode === 'glass') {
+            solidGlassGroup.visible = true;
+            wireframeGroup.visible = true;
+            particleSystem.visible = true;
+            spotLight.intensity = 5;
+        } else if (mode === 'particles') {
+            solidGlassGroup.visible = false;
+            wireframeGroup.visible = false;
+            particleSystem.visible = true;
+            spotLight.intensity = 0.5; // low light for particles
+        }
+    };
+
+    // Mouse movement interaction variables
     let mouseX = 0;
     let mouseY = 0;
     let targetX = 0;
@@ -182,19 +256,17 @@ function initHero3D() {
     const windowHalfY = window.innerHeight / 2;
 
     document.addEventListener('mousemove', (event) => {
-        mouseX = (event.clientX - windowHalfX) / 100;
-        mouseY = (event.clientY - windowHalfY) / 100;
+        mouseX = (event.clientX - windowHalfX) / 110;
+        mouseY = (event.clientY - windowHalfY) / 110;
     });
 
-    // Handle touch movement on mobile
     document.addEventListener('touchmove', (event) => {
         if (event.touches.length > 0) {
-            mouseX = (event.touches[0].clientX - windowHalfX) / 100;
-            mouseY = (event.touches[0].clientY - windowHalfY) / 100;
+            mouseX = (event.touches[0].clientX - windowHalfX) / 110;
+            mouseY = (event.touches[0].clientY - windowHalfY) / 110;
         }
     });
 
-    // Resize Handler
     function handleResize() {
         camera.aspect = container.clientWidth / container.clientHeight;
         camera.updateProjectionMatrix();
@@ -202,7 +274,6 @@ function initHero3D() {
     }
     window.addEventListener('resize', handleResize);
 
-    // Simple auto-rotation and interactive lag follow animation loop
     const clock = new THREE.Clock();
 
     function animate() {
@@ -210,26 +281,46 @@ function initHero3D() {
 
         const elapsedTime = clock.getElapsedTime();
 
-        // Slow auto rotation
-        skyscraperGroup.rotation.y = elapsedTime * 0.1;
+        // 1. Slow Y rotation
+        mainGroup.rotation.y = elapsedTime * 0.08;
         
-        // Gentle bounce to feel organic
-        skyscraperGroup.position.y = Math.sin(elapsedTime * 0.5) * 0.3 - 1;
+        // 2. Crane animation
+        craneGroup.rotation.y = Math.sin(elapsedTime * 0.2) * 0.6;
+        loadMesh.position.y = 1.6 + Math.sin(elapsedTime * 1.5) * 0.25;
+        const cablePosAttr = cable.geometry.attributes.position;
+        cablePosAttr.setY(1, 1.6 + Math.sin(elapsedTime * 1.5) * 0.25);
+        cablePosAttr.needsUpdate = true;
 
-        // Animate rings
-        ring1.rotation.z = -elapsedTime * 0.2;
-        ring2.rotation.z = elapsedTime * 0.1;
-        
-        // Slowly rotate crane jib
-        craneGroup.rotation.y = Math.sin(elapsedTime * 0.3) * 0.8;
+        // 3. Concentric rings
+        rings.forEach(ring => {
+            ring.mesh.rotation.z += ring.speed * 0.05;
+        });
 
-        // Interpolate mouse coordinates (smooth lag follow)
-        targetX += (mouseX - targetX) * 0.05;
-        targetY += (mouseY - targetY) * 0.05;
+        // 4. Gold particles
+        const posAttr = particleSystem.geometry.attributes.position;
+        for (let i = 0; i < particleCount; i++) {
+            const idx = i * 3;
+            const speedData = particleSpeeds[i];
+            
+            posAttr.array[idx + 1] += speedData[0];
+            if (posAttr.array[idx + 1] > 23) {
+                posAttr.array[idx + 1] = -3;
+            }
 
-        // Apply interactive tilting based on mouse
-        skyscraperGroup.rotation.x = targetY * 0.1;
-        skyscraperGroup.rotation.z = -targetX * 0.1;
+            const phase = speedData[3] + elapsedTime * speedData[1];
+            const currentRadius = 3.5 + Math.sin(elapsedTime * speedData[2] + speedData[3]) * 1.5;
+            posAttr.array[idx] = Math.cos(phase) * currentRadius;
+            posAttr.array[idx + 2] = Math.sin(phase) * currentRadius;
+        }
+        posAttr.needsUpdate = true;
+
+        // 5. Parallax tilt
+        targetX += (mouseX - targetX) * 0.04;
+        targetY += (mouseY - targetY) * 0.04;
+
+        mainGroup.rotation.x = targetY * 0.08;
+        mainGroup.rotation.z = -targetX * 0.08;
+        mainGroup.position.y = Math.sin(elapsedTime * 0.4) * 0.2 - 0.5;
 
         renderer.render(scene, camera);
     }
@@ -238,15 +329,12 @@ function initHero3D() {
 }
 
 /**
- * Initializes the 3D model for specific project types in their details modals
- * @param {string} canvasId - The ID of the canvas inside the modal
- * @param {string} projectType - The category of project ('residential', 'commercial', 'industrial', 'infrastructure')
+ * Initializes the detailed 3D model for specific project types in their details modals
  */
 function initProject3D(canvasId, projectType) {
     const canvas = document.getElementById(canvasId);
     if (!canvas) return;
 
-    // If a renderer for this canvas already exists, clean it up to prevent memory leak
     if (activeModalRenderers[canvasId]) {
         activeModalRenderers[canvasId].stop();
         delete activeModalRenderers[canvasId];
@@ -254,7 +342,8 @@ function initProject3D(canvasId, projectType) {
 
     const parent = canvas.parentElement;
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x050c18);
+    scene.background = new THREE.Color(0x02050e);
+    scene.fog = new THREE.FogExp2(0x02050e, 0.015);
 
     const camera = new THREE.PerspectiveCamera(45, parent.clientWidth / parent.clientHeight, 0.1, 100);
     camera.position.set(0, 6, 12);
@@ -264,50 +353,42 @@ function initProject3D(canvasId, projectType) {
     renderer.setSize(parent.clientWidth, parent.clientHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-    // Interactive Controls
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
-    controls.maxPolarAngle = Math.PI / 2 - 0.05; // Don't go below ground
+    controls.maxPolarAngle = Math.PI / 2 - 0.05;
     controls.minDistance = 5;
     controls.maxDistance = 25;
 
-    // Lights
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.55);
     scene.add(ambientLight);
 
-    const goldLight = new THREE.DirectionalLight(0xd4af37, 2);
-    goldLight.position.set(5, 10, 5);
+    const goldLight = new THREE.DirectionalLight(0xd4af37, 2.5);
+    goldLight.position.set(6, 12, 6);
     scene.add(goldLight);
 
-    const blueLight = new THREE.DirectionalLight(0x0077ff, 1.5);
-    blueLight.position.set(-5, 3, -5);
+    const blueLight = new THREE.DirectionalLight(0x0077ff, 2.0);
+    blueLight.position.set(-6, 4, -6);
     scene.add(blueLight);
 
-    // Group to hold the custom model
     const modelGroup = new THREE.Group();
     scene.add(modelGroup);
 
-    // Materials
-    const goldMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, roughness: 0.2, metalness: 0.8 });
-    const blueGlassMat = new THREE.MeshStandardMaterial({ color: 0x0077ff, roughness: 0.1, metalness: 0.9, transparent: true, opacity: 0.5 });
-    const steelMat = new THREE.MeshStandardMaterial({ color: 0x7f8c8d, roughness: 0.3, metalness: 0.9 });
+    const goldMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, roughness: 0.15, metalness: 0.85 });
+    const blueGlassMat = new THREE.MeshStandardMaterial({ color: 0x0077ff, roughness: 0.05, metalness: 0.95, transparent: true, opacity: 0.55 });
+    const steelMat = new THREE.MeshStandardMaterial({ color: 0x7f8c8d, roughness: 0.25, metalness: 0.95 });
     const lineGold = new THREE.LineBasicMaterial({ color: 0xd4af37, transparent: true, opacity: 0.9 });
-    const lineBlue = new THREE.LineBasicMaterial({ color: 0x0077ff, transparent: true, opacity: 0.6 });
+    const lineBlue = new THREE.LineBasicMaterial({ color: 0x0077ff, transparent: true, opacity: 0.65 });
 
-    // Grid Floor
-    const gridHelper = new THREE.GridHelper(16, 16, 0xd4af37, 0x13223f);
+    const gridHelper = new THREE.GridHelper(16, 16, 0xd4af37, 0x0f1c34);
     gridHelper.position.y = 0;
     scene.add(gridHelper);
 
-    // Generate generative model based on category
     switch (projectType) {
         case 'residential':
-            // Custom modern luxury villa architectural structure
-            // Main structure block
-            const baseGeom = new THREE.BoxGeometry(4, 1.5, 3);
+            const baseGeom = new THREE.BoxGeometry(4, 1.4, 3.2);
             const baseMesh = new THREE.Mesh(baseGeom, blueGlassMat);
-            baseMesh.position.set(0, 0.75, 0);
+            baseMesh.position.set(0, 0.7, 0);
             modelGroup.add(baseMesh);
 
             const baseEdges = new THREE.EdgesGeometry(baseGeom);
@@ -315,10 +396,9 @@ function initProject3D(canvasId, projectType) {
             baseLine.position.copy(baseMesh.position);
             modelGroup.add(baseLine);
 
-            // Upper cantilevered block (Offset rotating design)
-            const topGeom = new THREE.BoxGeometry(3.5, 1.5, 2.5);
+            const topGeom = new THREE.BoxGeometry(3.6, 1.4, 2.6);
             const topMesh = new THREE.Mesh(topGeom, blueGlassMat);
-            topMesh.position.set(0.5, 2.25, 0.3);
+            topMesh.position.set(0.6, 2.1, 0.4);
             modelGroup.add(topMesh);
 
             const topEdges = new THREE.EdgesGeometry(topGeom);
@@ -326,46 +406,61 @@ function initProject3D(canvasId, projectType) {
             topLine.position.copy(topMesh.position);
             modelGroup.add(topLine);
 
-            // Slanted roof architectural element
-            const roofGeom = new THREE.BoxGeometry(4.2, 0.15, 3.2);
-            const roofMesh = new THREE.Mesh(roofGeom, goldMat);
-            roofMesh.position.set(0.4, 3.1, 0.3);
-            modelGroup.add(roofMesh);
-            
-            // Pool base
-            const poolGeom = new THREE.BoxGeometry(2, 0.05, 1.5);
-            const poolMesh = new THREE.Mesh(poolGeom, new THREE.MeshBasicMaterial({color: 0x00e1ff, transparent: true, opacity: 0.7}));
-            poolMesh.position.set(-1.8, 0.03, 1);
-            modelGroup.add(poolMesh);
-            break;
+            const pergolaGeom = new THREE.BoxGeometry(4.2, 0.1, 3.4);
+            const pergolaMesh = new THREE.Mesh(pergolaGeom, goldMat);
+            pergolaMesh.position.set(0.5, 2.85, 0.4);
+            modelGroup.add(pergolaMesh);
 
-        case 'commercial':
-            // High-rise glass complex structure
-            const towerHeight = 5;
-            const segments = 4;
-            for (let i = 0; i < segments; i++) {
-                const size = 2 - i * 0.3;
-                const segGeom = new THREE.BoxGeometry(size, 1.25, size);
-                const segMesh = new THREE.Mesh(segGeom, blueGlassMat);
-                segMesh.position.y = 0.625 + i * 1.25;
-                // Alternate rotate slightly
-                segMesh.rotation.y = (i * Math.PI) / 12;
-                modelGroup.add(segMesh);
-
-                const segEdges = new THREE.EdgesGeometry(segGeom);
-                const segLine = new THREE.LineSegments(segEdges, lineGold);
-                segLine.position.copy(segMesh.position);
-                segLine.rotation.copy(segMesh.rotation);
-                modelGroup.add(segLine);
+            const columnGeom = new THREE.CylinderGeometry(0.06, 0.06, 2.8, 8);
+            for(let x of [-1.8, 2.1]) {
+                for(let z of [-1.4, 1.4]) {
+                    const col = new THREE.Mesh(columnGeom, goldMat);
+                    col.position.set(x, 1.4, z);
+                    modelGroup.add(col);
+                }
             }
             break;
 
+        case 'commercial':
+            const heights = [5.5, 4.2];
+            const offsets = [-1.2, 1.2];
+            for (let t = 0; t < 2; t++) {
+                const segs = t === 0 ? 5 : 4;
+                const h = heights[t];
+                const x = offsets[t];
+                
+                for(let i = 0; i < segs; i++) {
+                    const size = 1.6 - i * 0.22;
+                    const blockH = h / segs;
+                    const segGeom = new THREE.BoxGeometry(size, blockH, size);
+                    const segMesh = new THREE.Mesh(segGeom, blueGlassMat);
+                    segMesh.position.set(x, (blockH / 2) + i * blockH, 0);
+                    segMesh.rotation.y = (i * Math.PI) / 10;
+                    modelGroup.add(segMesh);
+
+                    const segEdges = new THREE.EdgesGeometry(segGeom);
+                    const segLine = new THREE.LineSegments(segEdges, lineGold);
+                    segLine.position.copy(segMesh.position);
+                    segLine.rotation.copy(segMesh.rotation);
+                    modelGroup.add(segLine);
+                }
+            }
+
+            const bridgeGeom = new THREE.BoxGeometry(2.4, 0.4, 0.8);
+            const bridgeMesh = new THREE.Mesh(bridgeGeom, steelMat);
+            bridgeMesh.position.set(0, 3.2, 0);
+            modelGroup.add(bridgeMesh);
+
+            const bridgeEdges = new THREE.EdgesGeometry(bridgeGeom);
+            const bridgeLine = new THREE.LineSegments(bridgeEdges, lineGold);
+            bridgeLine.position.copy(bridgeMesh.position);
+            modelGroup.add(bridgeLine);
+            break;
+
         case 'industrial':
-            // Industrial Warehouse facility with cylinders
-            // Warehouse block
-            const wareGeom = new THREE.BoxGeometry(4.5, 1.8, 3.5);
+            const wareGeom = new THREE.BoxGeometry(4.8, 1.8, 3.6);
             const wareMesh = new THREE.Mesh(wareGeom, steelMat);
-            wareMesh.position.set(-0.5, 0.9, 0);
+            wareMesh.position.set(-0.6, 0.9, 0);
             modelGroup.add(wareMesh);
 
             const wareEdges = new THREE.EdgesGeometry(wareGeom);
@@ -373,50 +468,57 @@ function initProject3D(canvasId, projectType) {
             wareLine.position.copy(wareMesh.position);
             modelGroup.add(wareLine);
 
-            // Sawtooth roofs
             for (let i = 0; i < 3; i++) {
-                const roofPrism = new THREE.ConeGeometry(0.7, 0.6, 4);
-                roofPrism.rotation.y = Math.PI / 4;
-                roofPrism.scale(1, 1, 3.5);
-                roofPrism.position.set(-2.0 + i * 1.5, 2.1, 0);
-                const roofM = new THREE.Mesh(roofPrism, goldMat);
-                modelGroup.add(roofM);
+                const roofGeom = new THREE.ConeGeometry(0.75, 0.5, 4);
+                roofGeom.rotation.y = Math.PI / 4;
+                roofGeom.scale(1, 1, 3.6);
+                roofGeom.position.set(-2.1 + i * 1.5, 2.05, 0);
+                const roof = new THREE.Mesh(roofGeom, goldMat);
+                modelGroup.add(roof);
             }
 
-            // Industrial Cylindrical Silos
-            const siloGeom = new THREE.CylinderGeometry(0.6, 0.6, 3.2, 12);
-            const siloMesh1 = new THREE.Mesh(siloGeom, steelMat);
-            siloMesh1.position.set(2.4, 1.6, -0.8);
-            modelGroup.add(siloMesh1);
-
-            const siloMesh2 = siloMesh1.clone();
-            siloMesh2.position.set(2.4, 1.6, 0.6);
-            modelGroup.add(siloMesh2);
-
+            const siloGeom = new THREE.CylinderGeometry(0.5, 0.5, 3.5, 16);
             const siloEdges = new THREE.EdgesGeometry(siloGeom);
-            const siloLine1 = new THREE.LineSegments(siloEdges, lineGold);
-            siloLine1.position.copy(siloMesh1.position);
-            modelGroup.add(siloLine1);
+            for(let z of [-1.0, 0, 1.0]) {
+                const silo = new THREE.Mesh(siloGeom, steelMat);
+                silo.position.set(2.5, 1.75, z);
+                modelGroup.add(silo);
 
-            const siloLine2 = siloLine1.clone();
-            siloLine2.position.copy(siloMesh2.position);
-            modelGroup.add(siloLine2);
+                const lineS = new THREE.LineSegments(siloEdges, lineGold);
+                lineS.position.copy(silo.position);
+                modelGroup.add(lineS);
+                
+                const coneGeom = new THREE.ConeGeometry(0.55, 0.4, 16);
+                const cone = new THREE.Mesh(coneGeom, goldMat);
+                cone.position.set(2.5, 3.7, z);
+                modelGroup.add(cone);
+            }
             break;
 
         case 'infrastructure':
-            // Suspended Cable Bridge Structure
-            // Towers
-            const towerGeom = new THREE.BoxGeometry(0.3, 4.5, 0.3);
-            const towerLeft = new THREE.Mesh(towerGeom, goldMat);
-            towerLeft.position.set(-3, 2.25, 0);
-            modelGroup.add(towerLeft);
+            const pylonGeom = new THREE.BoxGeometry(0.3, 4.8, 0.3);
+            const pylonEdges = new THREE.EdgesGeometry(pylonGeom);
+            const pylonPositions = [-2.8, 2.8];
+            
+            pylonPositions.forEach(x => {
+                for(let z of [-0.4, 0.4]) {
+                    const pillar = new THREE.Mesh(pylonGeom, goldMat);
+                    pillar.position.set(x, 2.4, z);
+                    modelGroup.add(pillar);
 
-            const towerRight = towerLeft.clone();
-            towerRight.position.set(3, 2.25, 0);
-            modelGroup.add(towerRight);
+                    const lineP = new THREE.LineSegments(pylonEdges, lineGold);
+                    lineP.position.copy(pillar.position);
+                    modelGroup.add(lineP);
+                }
+                const crossGeom = new THREE.BoxGeometry(0.15, 0.3, 1.0);
+                for(let y of [1.6, 3.6, 4.6]) {
+                    const cross = new THREE.Mesh(crossGeom, goldMat);
+                    cross.position.set(x, y, 0);
+                    modelGroup.add(cross);
+                }
+            });
 
-            // Road deck
-            const roadGeom = new THREE.BoxGeometry(8, 0.15, 1.2);
+            const roadGeom = new THREE.BoxGeometry(8.5, 0.12, 1.4);
             const roadMesh = new THREE.Mesh(roadGeom, steelMat);
             roadMesh.position.set(0, 1.5, 0);
             modelGroup.add(roadMesh);
@@ -426,38 +528,34 @@ function initProject3D(canvasId, projectType) {
             roadLine.position.copy(roadMesh.position);
             modelGroup.add(roadLine);
 
-            // Suspension cables (Generative math curves)
-            const curveLeft = new THREE.QuadraticBezierCurve3(
-                new THREE.Vector3(-4.5, 1.5, 0),
-                new THREE.Vector3(0, 2.0, 0),
-                new THREE.Vector3(4.5, 1.5, 0)
-            );
-            const curvePoints = curveLeft.getPoints(50);
-            const curveGeom = new THREE.BufferGeometry().setFromPoints(curvePoints);
-            const mainCable = new THREE.Line(curveGeom, lineGold);
-            modelGroup.add(mainCable);
+            for(let z of [-0.4, 0.4]) {
+                const curve = new THREE.QuadraticBezierCurve3(
+                    new THREE.Vector3(-4.5, 1.5, z),
+                    new THREE.Vector3(0, 3.8, z),
+                    new THREE.Vector3(4.5, 1.5, z)
+                );
+                const curvePoints = curve.getPoints(50);
+                const curveGeom = new THREE.BufferGeometry().setFromPoints(curvePoints);
+                const cable = new THREE.Line(curveGeom, lineGold);
+                modelGroup.add(cable);
 
-            // Vertical suspension hangers
-            for (let x = -2.5; x <= 2.5; x += 0.5) {
-                if (Math.abs(x) < 0.1) continue; // Skip center
-                const hangerHeight = 2.2 - (Math.abs(x) * 0.1);
-                const hangerGeom = new THREE.BufferGeometry().setFromPoints([
-                    new THREE.Vector3(x, 1.5, 0),
-                    new THREE.Vector3(x, hangerHeight, 0)
-                ]);
-                const hanger = new THREE.Line(hangerGeom, lineBlue);
-                modelGroup.add(hanger);
+                for (let x = -2.4; x <= 2.4; x += 0.4) {
+                    if (Math.abs(x) < 0.1 || Math.abs(Math.abs(x) - 2.8) < 0.1) continue;
+                    const curveY = 1.5 + (3.8 - 1.5) * (1 - (Math.abs(x) / 4.5) * (Math.abs(x) / 4.5));
+                    const hangerGeom = new THREE.BufferGeometry().setFromPoints([
+                        new THREE.Vector3(x, 1.5, z),
+                        new THREE.Vector3(x, curveY - 0.1, z)
+                    ]);
+                    const hanger = new THREE.Line(hangerGeom, lineBlue);
+                    modelGroup.add(hanger);
+                }
             }
             break;
     }
 
-    // Set model group slightly offset up
     modelGroup.position.y = 0.2;
-
-    // Animation flag
     let runAnimation = true;
 
-    // Resize Handler for modal
     function handleResize() {
         const w = parent.clientWidth;
         const h = parent.clientHeight;
@@ -465,35 +563,24 @@ function initProject3D(canvasId, projectType) {
         camera.updateProjectionMatrix();
         renderer.setSize(w, h);
     }
-    
-    // Add event listener to resize dynamically
     window.addEventListener('resize', handleResize);
 
-    // Animation Loop
     function animate() {
         if (!runAnimation) return;
         requestAnimationFrame(animate);
-
-        // Slow spin Y
-        modelGroup.rotation.y += 0.005;
-
-        // Orbit controls update
+        modelGroup.rotation.y += 0.006;
         controls.update();
-
         renderer.render(scene, camera);
     }
 
-    // Start animation loop
     animate();
 
-    // Store in global cache to clean up properly later
     activeModalRenderers[canvasId] = {
         stop: () => {
             runAnimation = false;
             window.removeEventListener('resize', handleResize);
             controls.dispose();
             renderer.dispose();
-            // Dispose geometries and materials
             modelGroup.traverse(child => {
                 if (child.isMesh) {
                     if (child.geometry) child.geometry.dispose();
